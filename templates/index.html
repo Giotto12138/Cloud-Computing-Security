@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>My Lovely One-Page App</title>
+<script>
+function reqJSON(method, url, data) {
+  return new Promise((resolve, reject) => {
+    let xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.responseType = 'json';
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve({status: xhr.status, data: xhr.response});
+      } else {
+        reject({status: xhr.status, data: xhr.response});
+      }
+    };
+    xhr.onerror = () => {
+      reject({status: xhr.status, data: xhr.response});
+    };
+    xhr.send(data);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  reqJSON('GET', '/events')
+  .then(({status, data}) => {
+    // Use the *data* argument to change what we see on the page.
+    // It will look something like this:
+    // {
+    //   "events": [
+    //     {"name": "Grandma's Birthday", "date": "08-05"},
+    //     {"name": "Independence Day", "date": "07-04"}
+    //   ]
+    // }
+
+    // There are better ways, but this is illustrative of the concept:
+    let html = '';
+    for (let event of data.events) {
+      html += `${event.name}: ${event.date}<br>`;
+    }
+    document.getElementById('events').innerHTML = html;
+  })
+  .catch(({status, data}) => {
+    // Display an error.
+    document.getElementById('events').innerHTML = 'ERROR: ' +
+      JSON.stringify(data);
+  });
+});
+</script>
+</head>
+<body>
+<div id="events"></div>
+</body>
+</html> 
+
+
+
+<!--
+<html>
+
+    <head>
+        <title>Hello, world! This is Qingshan Zhang's web page.</title>
+        <link rel="stylesheet" type="text/css" href="/css/style.css">
+    </head>
+
+    <body>
+    <h1>Hello, world!</h1>
+
+    <p>
+    This is a simple static HTML file created by Qingshan Zhang.
+    </p>
+
+    </body>
+
+</html> 
+-->
