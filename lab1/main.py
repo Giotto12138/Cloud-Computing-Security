@@ -46,11 +46,18 @@ def addEvents():
 """
     delete events based on the key of the event
 """
-@app.route('/delete', methods=['DELETE'])
-def delEvent():
-    event_id = request.json
-    print("here----------------------------------", event_id["key"])
-    DS.delete(DS.key(EVENT, event_id["key"], parent=ROOT))
+# @app.route('/delete', methods=['DELETE'])
+# def delEvent():
+#     event_id = request.json
+#     print("here----------------------------------", event_id["key"])
+#     DS.delete(DS.key(EVENT, event_id["key"], parent=ROOT))
+#     print("here***************************")
+#     return getEvents()
+@app.route('/delete/<int:event_id>', methods=['DELETE'])
+def delEvent(event_id):
+    # event_id = request.json
+    print("here----------------------------------", event_id)
+    DS.delete(DS.key(EVENT, event_id, parent=ROOT))
     print("here***************************")
     return getEvents()
 

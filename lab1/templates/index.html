@@ -48,6 +48,7 @@ function parseDate(datestr) {
     // when yearless
     if(arr.length == 2){ 
         var today = new Date();
+        
         if(today.getMonth()+1 > arr[0] || 
         (today.getMonth()+1 == arr[0] && today.getDate() > arr[1])){
         arr.unshift(today.getFullYear() + 1);
@@ -81,8 +82,8 @@ function remainingTime(datestr){
 
 
 async function deleteEvent(id){
-    document.getElementById('test').innerHTML = "here" + id
-    reqJSON("DELETE", "/delete", {key : id})
+    document.getElementById('test').innerHTML = "here" + id;
+    reqJSON("DELETE", `/delete/${id}`)
     .then(({status, data}) => {
     
         let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
