@@ -1,0 +1,20 @@
+runtime: python37
+
+# api_version: 1
+# threadsafe: true
+
+# handlers:
+# - url: /
+#   static_files: website/index.html
+#   upload: website/index.html
+
+# - url: /
+#   static_dir: website
+
+handlers:
+
+- url: /templates
+  static_dir: templates
+
+- url: /.*
+  script: auto

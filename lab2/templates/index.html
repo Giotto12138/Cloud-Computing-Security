@@ -1,0 +1,215 @@
+<html>
+
+<head>
+
+<style>
+
+    body {
+        background-color: #87CEFA;
+    }
+
+    th,td{
+        padding: 5px;
+        text-align: center;
+    }
+
+</style>
+
+<title>Event Management Site</title>
+<h1>Event Management Site</h1>
+
+<script>
+
+    function reqJSON(method, url, data) {
+        return new Promise((resolve, reject) => {
+            let xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.setRequestHeader('Content-type', 'application/json');
+            xhr.responseType = 'json';
+            xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve({status: xhr.status, data: xhr.response});
+            } else {
+                reject({status: xhr.status, data: xhr.response});
+            }
+            };
+            xhr.onerror = () => {
+            reject({status: xhr.status, data: xhr.response});
+            };
+            xhr.send(JSON.stringify(data));
+    });
+    }
+
+
+
+function parseDate(datestr) {
+    
+    var arr = datestr.split('-');
+    // when yearless
+    if(arr.length == 2){ 
+        var today = new Date();
+        if(today.getMonth()+1 > arr[0] || 
+        (today.getMonth()+1 == arr[0] && today.getDate() > arr[1])){
+        arr.unshift(today.getFullYear() + 1);
+        }
+        else arr.unshift(today.getFullYear());
+    }
+    
+    return new Date(Number.parseInt(arr[0]), Number.parseInt(arr[1])-1, Number.parseInt(arr[2]));
+    
+}
+
+
+function remainingTime(datestr){
+
+    var date = parseDate(datestr);
+    let seconds = Math.floor((+date - new Date()) / 1000);
+    // when the date is expired, it will not be shown on the page
+    if (seconds < 0) return "Expired";
+
+    var remain_day = parseInt(seconds/86400, 10);
+    var rest = seconds % 86400;
+    var remain_hour = parseInt(rest/3600, 10);
+    rest = rest % 3600;
+    var remain_min = parseInt(rest/60,10);
+    rest = rest % 60;
+    var remain_sec = rest;
+
+    return `${remain_day}days ${remain_hour}hrs ${remain_min}mins ${remain_sec}secs`;	
+}
+
+
+
+async function deleteEvent(id){
+    document.getElementById('test').innerHTML = "here" + id
+    reqJSON("DELETE", "/delete", {key : id})
+    .then(({status, data}) => {
+    
+        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
+        
+        for (let event of data.events) {
+            // show = show + line;
+            var remain = remainingTime(event.date);
+            // document.getElementById('test').innerHTML = remain
+            if(remain == "Expired")continue;
+            
+
+            show = show + "<tr><td>"+
+                    event.name+"</td><td>"+
+                    event.date+"</td><td>"+
+                    remain+"</td><td>"+
+                    `<button type='button' onclick='deleteEvent(${event.id})'>delete</button>` +
+                    "</td></tr>";
+        }
+        document.getElementById('events').innerHTML = show + '</table>';
+    })
+    .catch(({status, data}) => {
+        document.getElementById('events').innerHTML = 'ERROR: ' +
+        JSON.stringify(data);
+    });
+
+}
+
+
+// create a new event and upload to the datastore
+function create() {
+
+    dateFormat1 =/^(\d{4})-(\d{2})-(\d{2})$/;
+    dateFormat2 =/^(\d{2})-(\d{2})$/;
+    var dataInput = document.getElementById('dateInput').value
+
+    if(dateFormat1.test(dataInput) || dateFormat2.test(dataInput)){
+
+    reqJSON("POST","/event", {
+        name: document.getElementById('nameInput').value,
+        date: dataInput
+    })
+    .then(({status,data}) => {
+
+        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
+        
+        for (let event of data.events) {
+            // show = show + line;
+            var remain = remainingTime(event.date);
+            // document.getElementById('test').innerHTML = remain
+            if(remain == "Expired")continue;
+            
+
+            show = show + "<tr><td>"+
+                    event.name+"</td><td>"+
+                    event.date+"</td><td>"+
+                    remain+"</td><td>"+
+                    `<button type='button' onclick='deleteEvent(${event.id})'>delete</button>` +
+                    "</td></tr>";
+        }
+        document.getElementById('events').innerHTML = show + '</table>';
+    })
+    .catch(({status, data}) => {
+        document.getElementById('events').innerHTML = 'ERROR: ' +
+        JSON.stringify(data);
+    });
+    }else{
+        alert("Invalid Date Format!\nThe date format should be yyyy-MM-dd or MM-dd");
+        return False;
+    }
+}
+
+// get all the events when the page is loaded firt time
+document.addEventListener('DOMContentLoaded', () => {
+
+    reqJSON('GET', '/events')
+    .then(({status, data}) => {
+        
+        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
+        
+        for (let event of data.events) {
+            // show = show + line;
+            
+            var remain = remainingTime(event.date);
+            // document.getElementById('test').innerHTML = remain
+            if(remain == "Expired")continue;
+            
+
+            show = show + "<tr><td>"+
+                    event.name+"</td><td>"+
+                    event.date+"</td><td>"+
+                    remain+"</td><td>"+
+                    `<button type='button' onclick='deleteEvent(${event.id})'>delete</button>` +
+                    "</td></tr>";
+        }
+        document.getElementById('events').innerHTML = show + '</table>';
+    })
+    .catch(({status, data}) => {
+        document.getElementById('events').innerHTML = 'ERROR: ' +
+        JSON.stringify(data);
+    });
+});
+
+</script>
+
+</head>
+
+
+<body>
+    <!-- document.getElementById('test').innerHTML = "here"
+    this test element is for testing which stage the program is in  
+    -->
+    <div id="test"></div>
+
+    <form>
+        Event: <input type = "text" id = "nameInput"> <br><br/>
+        Please input date as the following format: yyyy-MM-dd or MM-dd  (e.g. 2020-09-23 or 09-23)  <br><br/>
+        Date: <input type = "text" id = "dateInput"><br><br/>
+    </form>
+
+    <button id = "createEvent">create event</button>
+    <script>
+    document.getElementById("createEvent").addEventListener("click", create);
+    </script>
+
+    <br><br/>
+    <div id="events"></div>
+
+</body>
+
+</html>
