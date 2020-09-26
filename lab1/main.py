@@ -5,7 +5,7 @@ import time
 app = Flask(__name__)
 
 DS = datastore.Client()
-EVENT = 'Event' # Name of the event table, can be anything you like.
+EVENT = 'event' # Name of the event table, can be anything you like.
 ROOT = DS.key('Entities', 'root') # Name of root key, can be anything.
 
 # main page
@@ -55,10 +55,7 @@ def addEvents():
 #     return getEvents()
 @app.route('/delete/<int:event_id>', methods=['DELETE'])
 def delEvent(event_id):
-    # event_id = request.json
-    print("here----------------------------------", event_id)
     DS.delete(DS.key(EVENT, event_id, parent=ROOT))
-    print("here***************************")
     return getEvents()
 
 

@@ -19,45 +19,47 @@
 <h1>Event Management Site</h1>
 
 <script>
-
+    // the browser uses this function to communicate with the server
     function reqJSON(method, url, data) {
         return new Promise((resolve, reject) => {
+            
             let xhr = new XMLHttpRequest();
             xhr.open(method, url, true);
             xhr.setRequestHeader('Content-type', 'application/json');
             xhr.responseType = 'json';
+
             xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve({status: xhr.status, data: xhr.response});
             } else {
                 reject({status: xhr.status, data: xhr.response});
             }
+
             };
+
             xhr.onerror = () => {
             reject({status: xhr.status, data: xhr.response});
             };
+
             xhr.send(JSON.stringify(data));
     });
     }
 
 
-
 function parseDate(datestr) {
     
-    var arr = datestr.split('-');
+    var date = datestr.split('-');
     // when yearless
-    if(arr.length == 2){ 
+    if(date.length == 2){ 
         var today = new Date();
         
-        if(today.getMonth()+1 > arr[0] || 
-        (today.getMonth()+1 == arr[0] && today.getDate() > arr[1])){
-        arr.unshift(today.getFullYear() + 1);
+        if(today.getMonth()+1 > date[0] || (today.getMonth()+1 == date[0] && today.getDate() > date[1])){
+        date.unshift(today.getFullYear() + 1);
         }
-        else arr.unshift(today.getFullYear());
+        else date.unshift(today.getFullYear());
     }
     
-    return new Date(Number.parseInt(arr[0]), Number.parseInt(arr[1])-1, Number.parseInt(arr[2]));
-    
+    return new Date(Number.parseInt(date[0]), Number.parseInt(date[1])-1, Number.parseInt(date[2]));
 }
 
 
@@ -65,36 +67,53 @@ function remainingTime(datestr){
 
     var date = parseDate(datestr);
     let seconds = Math.floor((+date - new Date()) / 1000);
-    // when the date is expired, it will not be shown on the page
-    if (seconds < 0) return "Expired";
+    // when the date is in the past, it will not be shown on the page
+    if (seconds < 0) return "past";
 
     var remain_day = parseInt(seconds/86400, 10);
     var rest = seconds % 86400;
+
     var remain_hour = parseInt(rest/3600, 10);
     rest = rest % 3600;
+
     var remain_min = parseInt(rest/60,10);
     rest = rest % 60;
+
     var remain_sec = rest;
 
-    return `${remain_day}days ${remain_hour}hrs ${remain_min}mins ${remain_sec}secs`;	
+    return `${remain_day} days ${remain_hour} hrs ${remain_min} mins ${remain_sec} secs`;	
 }
 
+// get the date and calculate the remaining time every second 
+setInterval(function(){
+
+    var table = document.getElementById("event_table");
+    // change every row's remaining time part
+    for (var i=1; i<table.rows.length; i++)
+    {   
+        let date = table.rows.item(i).cells.item(1).innerHTML;
+        let remain = remainingTime(date);
+        // if there is a date in the past, reload the page
+        if(remain == "past"){
+            window.location.reload()
+        }
+        table.rows.item(i).cells.item(2).innerHTML = remain;
+    }
+
+}, 1000);
 
 
-async function deleteEvent(id){
-    document.getElementById('test').innerHTML = "here" + id;
-    reqJSON("DELETE", `/delete/${id}`)
-    .then(({status, data}) => {
-    
-        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
+// after get the response from the server, update the webpage.
+function display(data){
+
+    let show = '<table id="event_table" border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th><th align="center"> You Could Delete Events </th></tr>';
         
         for (let event of data.events) {
-            // show = show + line;
+            
             var remain = remainingTime(event.date);
             // document.getElementById('test').innerHTML = remain
-            if(remain == "Expired")continue;
+            if(remain == "past")continue;
             
-
             show = show + "<tr><td>"+
                     event.name+"</td><td>"+
                     event.date+"</td><td>"+
@@ -103,6 +122,14 @@ async function deleteEvent(id){
                     "</td></tr>";
         }
         document.getElementById('events').innerHTML = show + '</table>';
+}
+
+
+function deleteEvent(id){
+    
+    reqJSON("DELETE", `/delete/${id}`)
+    .then(({status, data}) => {
+        display(data)
     })
     .catch(({status, data}) => {
         document.getElementById('events').innerHTML = 'ERROR: ' +
@@ -118,72 +145,45 @@ function create() {
     dateFormat1 =/^(\d{4})-(\d{2})-(\d{2})$/;
     dateFormat2 =/^(\d{2})-(\d{2})$/;
     var dataInput = document.getElementById('dateInput').value
-
+    // check the format of the input
     if(dateFormat1.test(dataInput) || dateFormat2.test(dataInput)){
 
-    reqJSON("POST","/event", {
-        name: document.getElementById('nameInput').value,
-        date: dataInput
-    })
-    .then(({status,data}) => {
+        reqJSON("POST","/event", {
+            name: document.getElementById('nameInput').value,
+            date: dataInput
+        })
+        .then(({status,data}) => {
+            display(data)
+        })
+        .catch(({status, data}) => {
+            document.getElementById('events').innerHTML = 'ERROR: ' +
+            JSON.stringify(data);
+        });
 
-        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
-        
-        for (let event of data.events) {
-            // show = show + line;
-            var remain = remainingTime(event.date);
-            // document.getElementById('test').innerHTML = remain
-            if(remain == "Expired")continue;
-            
-
-            show = show + "<tr><td>"+
-                    event.name+"</td><td>"+
-                    event.date+"</td><td>"+
-                    remain+"</td><td>"+
-                    `<button type='button' onclick='deleteEvent(${event.id})'>delete</button>` +
-                    "</td></tr>";
-        }
-        document.getElementById('events').innerHTML = show + '</table>';
-    })
-    .catch(({status, data}) => {
-        document.getElementById('events').innerHTML = 'ERROR: ' +
-        JSON.stringify(data);
-    });
     }else{
         alert("Invalid Date Format!\nThe date format should be yyyy-MM-dd or MM-dd");
         return False;
     }
 }
 
+
+function myrefresh(){
+    window.location.reload();
+    }
+
+
 // get all the events when the page is loaded firt time
 document.addEventListener('DOMContentLoaded', () => {
 
     reqJSON('GET', '/events')
     .then(({status, data}) => {
-        
-        let show = '<table border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th></tr>';
-        
-        for (let event of data.events) {
-            // show = show + line;
-            
-            var remain = remainingTime(event.date);
-            // document.getElementById('test').innerHTML = remain
-            if(remain == "Expired")continue;
-            
-
-            show = show + "<tr><td>"+
-                    event.name+"</td><td>"+
-                    event.date+"</td><td>"+
-                    remain+"</td><td>"+
-                    `<button type='button' onclick='deleteEvent(${event.id})'>delete</button>` +
-                    "</td></tr>";
-        }
-        document.getElementById('events').innerHTML = show + '</table>';
+        display(data)
     })
     .catch(({status, data}) => {
         document.getElementById('events').innerHTML = 'ERROR: ' +
         JSON.stringify(data);
     });
+    // setTimeout('myrefresh()',1000);
 });
 
 </script>
@@ -208,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("createEvent").addEventListener("click", create);
     </script>
 
+    <br><br/>
     <br><br/>
     <div id="events"></div>
 
