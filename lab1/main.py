@@ -20,9 +20,9 @@ def index():
 @app.route('/events',methods = ["GET"])
 def getEvents():
     events = DS.query(kind='event', ancestor=ROOT).fetch()
-    
+    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser.
     return jsonify({
-        'events':sorted([{'name': event['name'], 'date': event['date'], 'id': event.id} for event in events], key=lambda x:(x['name'])), 
+        'events':sorted([{'name': event['name'], 'date': event['date'], 'id': event.id} for event in events], key=lambda element:(element['date'])), 
         'error': None
     })
     
@@ -44,14 +44,12 @@ def addEvents():
     return getEvents()
 
 """
-    delete events based on the key of the event
+    delete events based on the id of the event in the datastore
 """
 # @app.route('/delete', methods=['DELETE'])
 # def delEvent():
 #     event_id = request.json
-#     print("here----------------------------------", event_id["key"])
 #     DS.delete(DS.key(EVENT, event_id["key"], parent=ROOT))
-#     print("here***************************")
 #     return getEvents()
 @app.route('/delete/<int:event_id>', methods=['DELETE'])
 def delEvent(event_id):
