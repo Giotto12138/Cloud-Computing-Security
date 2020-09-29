@@ -1,110 +1,62 @@
-from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash
+from flask import Flask, render_template, jsonify, request
 from google.cloud import datastore
-from functools import wraps
+import time
 
-events = Blueprint('events', __name__)
+app = Flask(__name__)
 
 DS = datastore.Client()
-EVENT = 'Event'
-key_dict = {}
+EVENT = 'event' # Name of the event table, can be anything you like.
+ROOT = DS.key('Entities', 'root') # Name of root key, can be anything.
 
-"""Decorator used to wrap all functions that require user login."""
-def login_required(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        user_id = request.cookies.get('user')
-        sesh_id = request.cookies.get('sesh')
+# main page
+@app.route('/')
+def index():
+    return render_template("index.html")
 
-        if user_id:
-            # Check user_id and session ID in Datastore
-            q_key = DS.key('Users', user_id)
-            q = DS.query(kind='Session', ancestor=q_key).fetch()
-
-            for val in list(q):
-                if val['Session_ID']==sesh_id:
-                    return func(*args, **kwargs)
-                #else:
-        else:
-            flash("Please log in")
-            return redirect(url_for('auth.login'))
-
-        flash('Session Error: Unmatched user session')
-        return redirect(url_for('auth.login'))
-
-    return wrapper
-
-@events.route('/')
-@login_required
-def root():
-    user_id = request.cookies.get('user')
-    user = DS.query(kind='Users', ancestor=DS.key('Users', user_id))
-    for u in list(user.fetch()):
-        f_name = u['First Name']
-
-    return render_template('events.html', data=send_events_to_jscript(), name=f_name)
-
-@events.route('/events', methods=['GET'])
-@login_required
-def send_events_to_jscript():
-    # Queary database for events and create event list.
-    u_id = request.cookies.get('user')
-    p_key = DS.key('Users', u_id)
-    QUERY = DS.query(kind=EVENT, ancestor=p_key)
-    entity_list = []
-    for val in list(QUERY.fetch()):
-        entity_list.append((val['Name'],val['Date'],val.key))
-    # Sort list of events by date.
-    entity_list.sort(key=lambda index: index[1])
-
-    # Create events JSON.  Provide each event a unique ID and add keys to dict.
-    if len(entity_list) < 1:
-        event_json = '{"events":[]}'
-        return event_json
-    else:
-        event_json = '{"events":['
-        counter = 1
-        eventID = ''
-        for x in entity_list:
-            eventID = 'Event%d'%(counter)
-            if counter==len(entity_list):
-                event_json+='{"Name":"'+x[0]+'","Date":"'+x[1]+'","ID":"'+eventID+'"}]}'
-                key_dict[eventID] = '%s'%(x[2])
-                break
-            else:
-                event_json+='{"Name":"'+x[0]+'","Date":"'+x[1]+'","ID":"'+eventID+'"},'
-                key_dict[eventID] = '%s'%(x[2])
-                counter+=1
-
-        return event_json
-
-@events.route('/event', methods=['POST'])
-@login_required
-def add_event():
-    u_id = request.cookies.get('user')
-    p_key = DS.key('Users', u_id)
-    # Get JSON from AJAX call
-    new_json = request.get_json()
-    # Add new entity to database.
-    entity = datastore.Entity(key=DS.key(EVENT, parent=p_key))
-    entity.update({'Name': new_json['Name'], 'Date': new_json['Date']})
+"""
+    get function
+    get all the existing events from google cloud datastore
+"""
+@app.route('/events',methods = ["GET"])
+def getEvents():
+    events = DS.query(kind='event', ancestor=ROOT).fetch()
+    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser, so that we could sort events correctly and display them. The browser will also calculate the remaining time every second
+    return jsonify({
+        'events':sorted([{'name': event['name'], 'date': event['date'], 'id': event.id} for event in events], key=lambda element:(element['date'])), 
+        'error': None
+    })
+    
+"""
+    post function
+    variables: {name} {date}, 
+    add new event to google cloud datastore
+"""  
+@app.route('/event', methods=['POST'])
+def addEvents():
+    event = request.json
+    entity = datastore.Entity(key=DS.key('event', parent=ROOT))
+    entity.update({
+        'name': event['name'],
+        'date': event['date']
+    })
     DS.put(entity)
-    return new_json
+    
+    return getEvents()
 
-@events.route('/delete', methods=['POST'])
-@login_required
-def del_event():
-    u_id = request.cookies.get('user')
-    p_key = DS.key('Users', u_id)
-    QUERY = DS.query(kind=EVENT, ancestor=p_key)
-    # Get JSON from AJAX call
-    del_json = request.get_json()
-    # Query database for keys.  Compare with EventID:key pair in dictionary.
-    for ent in list(QUERY.fetch()):
-        key_str = '%s'%ent.key
-        if key_str in key_dict[del_json['ID']]:
-            DS.delete(ent.key)
-            key_dict.pop(del_json['ID'])
-            break
-        else:
-            continue
-    return send_events_to_jscript()
+"""
+    delete events based on the id of the event in the datastore
+"""
+# @app.route('/delete', methods=['DELETE'])
+# def delEvent():
+#     event_id = request.json
+#     DS.delete(DS.key(EVENT, event_id["key"], parent=ROOT))
+#     return getEvents()
+@app.route('/delete/<int:event_id>', methods=['DELETE'])
+def delEvent(event_id):
+    DS.delete(DS.key(EVENT, event_id, parent=ROOT))
+    return getEvents()
+
+
+if __name__ == '__main__':
+    # For local testing
+    app.run(host='127.0.0.1', port=7070, debug=True)

@@ -20,7 +20,7 @@ def index():
 @app.route('/events',methods = ["GET"])
 def getEvents():
     events = DS.query(kind='event', ancestor=ROOT).fetch()
-    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser.
+    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser, so that we could sort events correctly and display them. The browser will also calculate the remaining time every second 
     return jsonify({
         'events':sorted([{'name': event['name'], 'date': event['date'], 'id': event.id} for event in events], key=lambda element:(element['date'])), 
         'error': None
