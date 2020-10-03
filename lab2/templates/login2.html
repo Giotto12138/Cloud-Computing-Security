@@ -9,18 +9,16 @@
 
 {% macro render_field(field) %}
 
-  <dt>{{ field.label }}:
-  <dd>{{ field(**kwargs)|safe }}
-
-  {% if field.errors %}
-    <ul class=errors>
-    {% for error in field.errors %}
-      <li>{{ error }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-  
-  </dd>
+    <dt>{{ field.label }}:
+    <dd>{{ field(**kwargs)|safe }}
+    {% if field.errors %}
+        <ul class=errors>
+        {% for error in field.errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+    </dd>
 
 {% endmacro %}
 
@@ -30,12 +28,12 @@
     {{ form.csrf_token }}
     {{ render_field(form.username) }}
     {{ render_field(form.password) }}
-    {{ render_field(form.confirm) }}
 
     {% if emsg %}
         <h3> {{ emsg }}</h3>
     {% endif %}
+
     <br></br>
-    <input type="submit" value="Register">
+    <input type="submit" value="Login">
 
 </form>

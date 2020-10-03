@@ -1,4 +1,5 @@
 import uuid, time, os
+from datetime import datetime, timedelta
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 from google.cloud import datastore
 from flask_login import LoginManager, login_user, current_user, login_required, UserMixin, logout_user
@@ -7,33 +8,34 @@ from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, EqualTo
 from flask_wtf import FlaskForm
 
+
 # user class
-class User(UserMixin):
-    def __init__(self, user):
-        self.username = user.get("name")
-        self.password_hash = user.get("password")
-        self.id = user.get("id")
+# class User(UserMixin):
+#     def __init__(self, user):
+#         self.username = user.get("name")
+#         self.password_hash = user.get("password")
+#         self.id = user.get("id")
 
-    def verify_password(self, password):
+#     def verify_password(self, password):
         
-        if self.password_hash is None:
-            return False
+#         if self.password_hash is None:
+#             return False
         
-        return check_password_hash(self.password_hash, password)
+#         return check_password_hash(self.password_hash, password)
 
-    def get_id(self):
-        return self.id
+#     def get_id(self):
+#         return self.id
 
-    @staticmethod
-    def get(user_id):
+#     @staticmethod
+#     def get(user_id):
         
-        if not user_id:
-            return None
-        for user in USERS:
-            if user.get('id') == user_id:
-                return User(user)
+#         if not user_id:
+#             return None
+#         for user in USERS:
+#             if user.get('id') == user_id:
+#                 return User(user)
             
-        return None
+#         return None
 
 # the class for user login  
 class LoginForm(FlaskForm):
@@ -53,35 +55,37 @@ class SignupForm(FlaskForm):
 
 
 app = Flask(__name__)
-
-app.secret_key = os.urandom(24) # generate a 24 bits random key as a form exchange secret key, preventing CSRF attack
+# generate a 24 bits random key as a form exchange secret key, preventing CSRF attack
+app.secret_key = os.urandom(24) 
+# set the duration of session of 1 hour
+# app.config['PERMANENT_SESSION_LIFETIME'] = 3600
 
 login_manager = LoginManager()  # initiate login management object
 login_manager.init_app(app)  # initiate app
-login_manager.login_view = 'login'  # set the page to jump to when validation fails. the login page
-
-USERS = [{
-        "id": 1,
-        "name": 'giotto',
-        "password": generate_password_hash('123')
-    }] # stores every registered user, giotto is an intiate user for testing
+login_manager.login_view = 'login'  # set the page to jump to the login page, when validation fails. 
 
 DS = datastore.Client()
 EVENT = 'event' # Name of the event table, can be anything you like.
+SESSION = 'session'
+USER = 'user'
 ROOT = DS.key('Entities', 'root') # Name of root key, can be anything.
+EXPIRES_FMT = "%Y%m%d-%H%M%S"   
 
 # main page
 @app.route('/')
 @login_required
 def index():
+    
     # current_user is a global varabe provided by flask_login package
-    return render_template("index.html", username=current_user.username)
+    return render_template("index.html")
+    #return render_template("index.html", username=current_user.username)
 
 """
     get function
     get all the existing events from google cloud datastore
 """
 @app.route('/events',methods = ["GET"])
+@login_required
 def getEvents():
     events = DS.query(kind='event', ancestor=ROOT).fetch()
     #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser, so that we could sort events correctly and display them. The browser will also calculate the remaining time every second
@@ -96,6 +100,7 @@ def getEvents():
     add new event to google cloud datastore
 """  
 @app.route('/event', methods=['POST'])
+@login_required
 def addEvents():
     event = request.json
     entity = datastore.Entity(key=DS.key('event', parent=ROOT))
@@ -125,30 +130,61 @@ def delEvent(event_id):
 The following is the manage user registration and login section.
 ''' 
 
-# create a user, will be replaced by register function
-def create_user(user_name, password):
+# create a user
+def create_user(username, password):
+    if not username:
+        return
     
-    user = {
-        "name": user_name,
-        "password": generate_password_hash(password),
-        "id": uuid.uuid4()  # use uuid to generate an unique id as Primary key
-    }
-    USERS.append(user)
-    
+    user = datastore.Entity(user_key(username))
+    user.update({
+        'username': username,
+        'password': generate_password_hash(password),
+        # 'id': uuid.uuid4()  # use uuid to generate an unique id as Primary key
+    })
+    DS.put(user)
 
-# get user information according to the user_name
-def get_user(user_name):
+
+def user_key(user_or_username):
+    username = user_or_username
     
-    for user in USERS:
-        if user.get("name") == user_name:
-            return user
+    if isinstance(user_or_username, datastore.Entity):
+        username = user_or_username.key.name
         
-    return None
+    return DS.key(USER, username, parent=ROOT)
 
 
 @login_manager.user_loader  # define a method to get logining user
 def load_user(user_id):
     return User.get(user_id)
+
+
+def check_user(username, password):
+    user = DS.get(user_key(username))
+    
+    if user and check_password_hash(user['password'], password):
+        return True
+
+    return False
+
+
+def new_session(username, ttl=None):
+    # set the duration of session of 1 hour
+    if not ttl:
+        ttl = timedelta(hours=1)
+    # use uuid to generate an unique id for session
+    token = str(uuid.uuid4())
+    exp = (datetime.now() + ttl).strftime(EXPIRES_FMT)
+
+    session = datastore.Entity(key=DS.key(SESSION, token, parent=ROOT))
+    session.update({
+        'username': username,
+        'exp': exp,
+    })
+    # use google datastore to store session for every user
+    DS.put(session)
+
+    return token
+
 
 # login function
 @app.route('/login/', methods=('GET', 'POST'))  
@@ -159,41 +195,65 @@ def login():
     if form.validate_on_submit():
         user_name = form.username.data
         password = form.password.data
-        user_info = get_user(user_name)  # try to find this user from stored users
         
-        if user_info is None:
+        if not check_user(user_name, password):
             emsg = "invalid username or password"
         else:
-            user = User(user_info)  # initiate a user entity
-            if user.verify_password(password):  # check the password
-                login_user(user)  # create a session for the user
-                # jump to the main page
-                return redirect(request.args.get('next') or url_for('index'))
-            else:
-                emsg = "invalid username or password"
+            print("mark***********************")
+            # user = User(user_info)  # initiate a user entity
+            #login_user(user)  # create a session for the user
+            # jump to the main page
+            session_token = new_session(user_name)
+            resp1 = redirect(url_for('index'))
+            resp1.set_cookie('sess', session_token)
+            resp2 = redirect(request.args.get('next'))
+            resp2.set_cookie('sess', session_token)
+            return resp1 or resp2
+        
+            #return redirect(request.args.get('next') or url_for('index'))
                 
     return render_template('login.html', form=form, emsg=emsg)
+
+def migrate(username):
+    data = list(DS.query(kind = "event", ancestor=ROOT).fetch())
+    user = list(DS.query(kind='user', ancestor=ROOT).fetch())
+    userkey = user[0].key
+    entity = datastore.Entity(key=DS.key("event"))
+    
+    for i in range(len(data)):
+        data[i]['userkey'] = userkey
+        entity.update({'name': data[i]['name'], 'date': data[i]['date'],'id': data[i]['id'], 'userkey': data[i]['userkey']})
+        
+    DS.put(entity)
+
 
 # registration function
 @app.route('/register/', methods=('GET', 'POST')) 
 def register():
     form = SignupForm()
     emsg = None
-    
+    # when we click the submit button on the register page, meaning post something
     if form.validate_on_submit():
         
         user_name = form.username.data
         password = form.password.data
-        # get user information for this user
-        user_info = get_user(user_name) 
+        
         # if it is an unused user name, we create a new username
-        if user_info is None:
+        if not DS.get(user_key(user_name)):
             create_user(user_name, password)  
+            session_token = new_session(user_name)
             # jump to the login page
-            return redirect(url_for("login"))  
+            resp = redirect(url_for('index'))
+            resp.set_cookie('sess', session_token)
+            # migrate data
+            if len(DS.query(kind = USER, ancestor=ROOT).fetch()) <= 1:
+                migrate(user_name)
+            
+            return resp
+            #return redirect(url_for("login"))  
         else:
             emsg = "this username already exists"  
-            
+    
     return render_template('register.html', form=form, emsg=emsg)
 
 
@@ -201,8 +261,13 @@ def register():
 @app.route('/logout')  
 @login_required
 def logout():
-    logout_user()
-    return redirect(url_for('login'))
+    #logout_user()
+    token = request.cookies.get('sess')
+    DS.delete(DS.key(SESSION, token, parent=ROOT))
+    resp = redirect(url_for("login"))
+    resp.delete_cookie('sess')
+    return resp
+    # return redirect(url_for('login'))
 
 
 if __name__ == '__main__':

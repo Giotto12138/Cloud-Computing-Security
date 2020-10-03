@@ -49,6 +49,19 @@
     });
     }
 
+/*
+* redirects to the login page if the
+* server indicates that a login is needed.
+*/
+async function reqOrLogin(method, path, data) {
+const resp = await reqJSON(method, path, data);
+if (resp.login_url) {
+    window.location = resp.login_url;
+    return null;
+}
+return resp;
+}
+
 
 function parseDate(datestr) {
     
@@ -131,7 +144,8 @@ function display(data){
 
 function deleteEvent(id){
     
-    reqJSON("DELETE", `/delete/${id}`)
+    reqOrLogin("DELETE", `/delete/${id}`)
+    //reqJSON("DELETE", `/delete/${id}`)
     .then(({status, data}) => {
         display(data)
     })
@@ -152,7 +166,8 @@ function create() {
     // check the format of the input
     if(dateFormat1.test(dataInput) || dateFormat2.test(dataInput)){
 
-        reqJSON("POST","/event", {
+        reqOrLogin("POST","/event", {
+        //reqJSON("POST","/event", {
             name: document.getElementById('nameInput').value,
             date: dataInput
         })
@@ -174,7 +189,8 @@ function create() {
 // get all the events when the page is loaded firt time
 document.addEventListener('DOMContentLoaded', () => {
 
-    reqJSON('GET', '/events')
+    reqOrLogin('GET', '/events')
+    //reqJSON('GET', '/events')
     .then(({status, data}) => {
         display(data)
     })
