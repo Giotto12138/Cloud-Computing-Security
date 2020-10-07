@@ -304,21 +304,13 @@ def migrate(username):
     query.add_filter('username', '=', username)
     user_key = list(query.fetch())[0].id
     
-    entity = datastore.Entity(key = DS.key(EVENT, parent=ROOT))
-    # update all the old events with the first user's user_key
-    for old_event in old_events:
+    # updates all the old events with the first user's user_key and deletes original old events
+    for old_event in list(old_events):
+        entity = datastore.Entity(key = DS.key(EVENT, parent=ROOT))
         entity.update({'name': old_event['name'], 'date': old_event['date'], 'user_key': user_key})
+        DS.put(entity)
         
-    DS.put(entity)
-    
-    # delete original old events which don't have the current user_key in the datastore
-    query = DS.query(kind = EVENT, ancestor=ROOT)
-    # TODO: this query should be fixed
-    query.add_filter('user_key', '=', '')
-    origin = list(query.fetch())
-    
-    for event in origin:
-        DS.delete(event.key)
+        DS.delete(old_event.key)
 
 
 if __name__ == '__main__':

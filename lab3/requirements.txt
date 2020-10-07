@@ -1,6 +1,9 @@
-Flask_Login==0.5.0
-Flask==1.1.1
+Flask==1.1.2
+google-cloud-datastore==1.9.0
+google-auth==1.6.2
+requests==2.21.0
+bcrypt==3.1.7
 Werkzeug==0.16.0
 WTForms==2.3.3
 Flask_WTF==0.14.3
-protobuf==3.13.0
+# gunicorn

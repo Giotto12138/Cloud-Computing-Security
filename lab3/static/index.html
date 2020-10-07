@@ -17,14 +17,13 @@
 
 <title>Event Management Site</title>
 <h1>Event Management Site</h1>
-<h2>Welcome {{ username }}!</h2>
-<a href='{{ url_for('logout')}}'>Log out</a>
 <br><br/>
 
-<script>
-//TODO: beautify the code and wrtie more organized comments
 
-    // the browser uses this function to communicate with the server
+<script>
+//TODO: beautify the page
+
+    // the browser uses this function to communicate with the server, sends data and receives data
     function reqJSON(method, url, data) {
         return new Promise((resolve, reject) => {
             
@@ -39,10 +38,11 @@
             } else {
                 reject({status: xhr.status, data: xhr.response});
             }
+
             };
 
             xhr.onerror = () => {
-                reject({status: xhr.status, data: xhr.response});
+            reject({status: xhr.status, data: xhr.response});
             };
 
             xhr.send(JSON.stringify(data));
@@ -109,13 +109,13 @@ setInterval(function(){
 
 // after get the response from the server, update the webpage.
 function display(data){
-
+    // construct the table header
     let show = '<table id="event_table" border="3" cellspacing="0" cellpadding="0" frame=above ><tr><th align="center"> Event Name </th><th align="center"> Event Date </th><th align="center"> Remaining Time </th><th align="center"> You Could Delete Events </th></tr>';
         
         for (let event of data.events) {
             
             var remain = remainingTime(event.date);
-            // doesn't display past events
+            // document.getElementById('test').innerHTML = remain
             if(remain == "past")continue;
             
             show = show + "<tr><td>"+
@@ -185,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // setTimeout('myrefresh()',1000);
 });
 
-</script>
+</script> 
+
 
 </head>
 
@@ -194,7 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- document.getElementById('test').innerHTML = "here"
     this test element is for testing which stage the program is in  
     -->
+
     <div id="test"></div>
+
+    <form id="logout" action = "/logout" method = "GET">
+        <input type="submit" value="logout">
+    </form>
 
     <form>
         Event: <input type = "text" id = "nameInput"> <br><br/>
@@ -203,16 +209,17 @@ document.addEventListener('DOMContentLoaded', () => {
     </form>
 
     <button id = "createEvent">create event</button>
-
+    
     <script>
-        document.getElementById("createEvent").addEventListener("click", create);
-    </script>
+    document.getElementById("createEvent").addEventListener("click", create);
+    </script> 
+    
 
     <br><br/>
     <br><br/>
     <div id="events"></div>
 
+    
 </body>
-
 </center>
 </html>
