@@ -1,0 +1,37 @@
+<html>
+
+    <style>
+
+    body {
+        background-color: #87CEFA;
+    }
+
+    </style>
+
+    <head>
+        <title>Event Management Site</title>
+    </head>
+
+    <body>
+        <h1>Register</h1>
+        
+        <form id="register_form" action="/register" method="POST">
+            <h4>If this username already exists, you will get the register page again</h4>
+            <h4>If the registration is successful, go to the main page</h4>
+
+            Username: <input type="text" id="username" name="username">
+            <br></br>
+            Password: <input type="password" id="password" name="password">
+            <br></br>
+            <!--
+            Input your password again: <input type="password" id="repassword" name="repassword">
+            <br></br>
+            -->
+
+            <input type="submit" name="submit"> 
+
+        </form>
+
+    </body>
+
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Management Site</title>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body style="text-align: center">
+    <h1>Login</h1>
+    <form action = "/login" method = "POST">
+        Username: <input type="text" id="username" name="username">
+            <br></br>
+        Password: <input type="password" id="password" name="password">
+            <br></br>
+        <input type="submit" value="Login">
+    </form>
+
+    <form action = "/reg" method = "GET">
+        <input type="submit"  value="Register">
+    </form>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <script>
+    {% for message in messages %}
+        <h3> {{ message }}</h3>
+    {% endfor %}
+    </script>
+  {% endif %}
+{% endwith %}
+
+
+</body>
+</html>

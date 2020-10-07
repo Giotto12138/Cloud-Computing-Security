@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <title>Lab 1</title>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body onload="getEvents()" style="text-align: center">
+    <div id = d>
+        <h1>Event List</h1>
+        <form id = "add_event" onsubmit = "return false">
+            {# if the function for onclick return false, the form will not be submit#}
+            Event: &nbsp; <input type = "text" name = "name" placeholder = "Please input event name" style="width:320px; height:30px; font-size:15px" > <br><br>
+            Date:  &nbsp; <input type = "text" name = "date" placeholder = "Please input date like: yyyy-mm-dd or mm-dd" style="width:320px; height:30px; font-size:15px" > <br><br>
+            <input type = "submit" name = "Submit" value="submit" onclick = "postEvent()">
+            <br><br><br><br><br><br>
+        </form>
+        <table id = "event_list" style="font-size:20px; margin:auto; text-align:left; width:1000px; height:100px" ></table>
+        <p id = "events"></p>
+    </div>
+    <form action = "/logout" method = "GET">
+        <input type="submit" value="log out" onclick="deleteCookie()">
+    </form>
+</body>
+</html>
