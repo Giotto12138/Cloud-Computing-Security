@@ -21,9 +21,9 @@ USER = 'user' # 'event' # Name of the event table.
 SESSION = 'session' # 'event' # Name of the event table.
 # for google login
 CLIENT_ID = "885605768888-b5s1tso4trib4i5q2khqlm0c8isph64f.apps.googleusercontent.com"
-# REDIRECT_URI = 'https://qingshan-cloud-security.ue.r.appspot.com/oidcauth'
+REDIRECT_URI = 'https://qingshan-cloud-security.ue.r.appspot.com/oidcauth'
 # for local testing
-REDIRECT_URI = "http://127.0.0.1:7070/oidcauth"
+# REDIRECT_URI = "http://127.0.0.1:7070/oidcauth"
 # STATE = str(uuid.uuid4())   
 # NONCE = str(uuid.uuid4())   
 
@@ -331,7 +331,7 @@ def g_login():
     sta = str(uuid.uuid4())
     non = str(uuid.uuid4())
     
-    res = make_response(
+    resp = make_response(
         render_template('login.html',
             auth_endpoint = discovery("authorization_endpoint"), 
             client_id = CLIENT_ID,
@@ -340,11 +340,14 @@ def g_login():
             redirect_uri=REDIRECT_URI,
             ))
     # store state and nonce in cookie for double check preventing CSRF
-    res.set_cookie('g_state', sta, max_age=3600)
+    resp.set_cookie('g_state', sta, max_age=3600)
+    resp.set_cookie('g_nonce', non, max_age=3600)
+    # When local testing is not needed, could enable secure=True to restrict cookies only for HTTPS
+    # res.set_cookie('g_state', sta, max_age=3600, secure=True)
+    # res.set_cookie('g_nonce', non, max_age=3600, secure=True)
     # print("1111111111111111", sta)
-    res.set_cookie('g_nonce', non, max_age=3600)
     
-    return res
+    return resp
 
 # obtain the new uri from Google’s discovery document based on the keyword
 def discovery(key):
@@ -397,6 +400,8 @@ def g_auth():
     
     resp = redirect(url_for("index"))
     resp.set_cookie('user_cookie', token)
+    # When local testing is not needed, could enable secure=True to restrict cookies only for HTTPS
+    # resp.set_cookie('user_cookie', token, secure=True)
 
     return resp
     
