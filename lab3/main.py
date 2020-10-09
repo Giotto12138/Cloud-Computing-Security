@@ -150,6 +150,8 @@ def register():
         
     resp = redirect(url_for("index"))
     resp.set_cookie('user_cookie', token)
+    # When local testing is not needed, could enable secure=True to restrict cookies only for HTTPS
+    #resp.set_cookie('user_cookie', token, secure=True)
 
     return resp
 
@@ -187,6 +189,8 @@ def login():
         
         resp = redirect(url_for("index"))
         resp.set_cookie('user_cookie', token)
+        # When local testing is not needed, could enable secure=True to restrict cookies only for HTTPS
+        #resp.set_cookie('user_cookie', token, secure=True)
 
         return resp
     else:
