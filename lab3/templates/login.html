@@ -42,7 +42,7 @@
 
         </form>
         -->
-        <p><a id='google' href='https://accounts.google.com/o/oauth2/v2/auth?client_id={{client_id}}&response_type=code&scope=openid%20email%20profile&redirect_uri={{redirect_url}}&state={{state}}&nonce={{nonce}}'>Login with Google</a></p>
+        <p><a id='google' href='{{auth_endpoint}}?client_id={{client_id}}&response_type=code&scope=openid%20email%20profile&redirect_uri={{redirect_uri}}&state={{state}}&nonce={{nonce}}'>Login with Google</a></p>
 
         <form id="register" action="/register" method="GET">
             Don’t have an account? <input type="submit" value="Register"><br>

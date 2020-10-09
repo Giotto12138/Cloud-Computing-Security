@@ -1,7 +1,7 @@
-import time, bcrypt, os, uuid
+import time, bcrypt, os, uuid, requests, json, base64
 from datetime import datetime, timedelta, timezone
 from google.cloud import datastore
-from flask import Flask, render_template, jsonify, request, redirect, send_from_directory, url_for, flash
+from flask import Flask, render_template, jsonify, request, redirect, send_from_directory, url_for, flash, make_response
 from wtforms import StringField, PasswordField
 from wtforms.validators import DataRequired, EqualTo
 from flask_wtf import FlaskForm
@@ -11,6 +11,7 @@ app = Flask(__name__)
 # generate a 24 bits random key as a form exchange secret key, preventing CSRF attack. 
 # also for flask flash function
 app.secret_key = os.urandom(24) 
+# Static file cache save time
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = timedelta(seconds = 1)
 
 DS = datastore.Client()
@@ -18,6 +19,13 @@ EVENT = 'event' # Name of the event table.
 ROOT = DS.key('Entities', 'root') # Name of root key, can be anything.
 USER = 'user' # 'event' # Name of the event table.
 SESSION = 'session' # 'event' # Name of the event table.
+# for google login
+CLIENT_ID = "885605768888-b5s1tso4trib4i5q2khqlm0c8isph64f.apps.googleusercontent.com"
+# REDIRECT_URI = 'https://qingshan-cloud-security.ue.r.appspot.com/oidcauth'
+# for local testing
+REDIRECT_URI = "http://127.0.0.1:7070/oidcauth"
+# STATE = str(uuid.uuid4())   
+# NONCE = str(uuid.uuid4())   
 
 # generate old events for migration testing
 # entity = datastore.Entity(key = DS.key(EVENT, parent=ROOT))
@@ -26,7 +34,7 @@ SESSION = 'session' # 'event' # Name of the event table.
 
 
 ''' 
-***************************  Below is the events management section  ****************************************
+***************************  Below is the events management section  *********************************
 ''' 
 
 # get function, get all the existing events from google cloud datastore
@@ -83,7 +91,7 @@ def delEvent(event_id):
 
 
 ''' 
-*******************************  Below is the user authentication section  ***********************************
+*****************************  Below is the user authentication section  ******************************
 '''     
     
 # the class for user login  
@@ -154,7 +162,8 @@ def used_username():
 def login():
     
     if request.method == 'GET':
-        return send_from_directory('static', 'login.html')
+        return g_login()
+        # return send_from_directory('static', 'login.html')
     
     # when the request method is post, the user has inputted the username and the password
     form = LoginForm()
@@ -311,7 +320,95 @@ def migrate(username):
         DS.put(entity)
         
         DS.delete(old_event.key)
+    
+        
+''' 
+******************************  Below is the openID Connect section  **********************************
+'''     
 
+# when the user chooses to login with google account, render the login form with some parameters
+def g_login():
+    sta = str(uuid.uuid4())
+    non = str(uuid.uuid4())
+    
+    res = make_response(
+        render_template('login.html',
+            auth_endpoint = discovery("authorization_endpoint"), 
+            client_id = CLIENT_ID,
+            state=sta,
+            nonce=non,
+            redirect_uri=REDIRECT_URI,
+            ))
+    # store state and nonce in cookie for double check preventing CSRF
+    res.set_cookie('g_state', sta, max_age=3600)
+    # print("1111111111111111", sta)
+    res.set_cookie('g_nonce', non, max_age=3600)
+    
+    return res
+
+# obtain the new uri from Google’s discovery document based on the keyword
+def discovery(key):
+    temp = requests.get("https://accounts.google.com/.well-known/openid-configuration")
+    uri_dict = temp.json()
+    
+    return uri_dict[key]
+
+
+# check the state, then process the redirect_uri request
+@app.route('/oidcauth', methods=['GET'])
+def g_auth():
+    # state is a CSRF token
+    # print("222222222222222222222", request.cookies.get('g_state'))
+    # print("333333333333333333333333333333", request.args['state'])
+    # if request.args['state'] != request.cookies.get('g_state'):
+    #     print("mark***************************")
+    #     return redirect(url_for('login'))
+    # else:
+        # send a POST request to the ID provider, format: requests.post(url, data)
+        # response is the JWT response from the ID provide
+    response = requests.post(discovery("token_endpoint"), 
+    {   'code': request.args['code'],
+        'client_id': CLIENT_ID,
+        'client_secret': DS.get(DS.key('secret', 'oidc'))['client-secret'],
+        'redirect_uri': REDIRECT_URI,
+        'grant_type': 'authorization_code'})
+
+    # parse JWT, check nonce
+    id_token = response.json()['id_token']
+    claims = jwt_unpack(id_token)
+    
+    nonce = claims['nonce']
+    
+    # if nonce != request.cookies.get('g_nonce'):
+    #     print("Nonce don't match")
+    
+    # use sub as username to store this user in the datastore
+    sub = claims['sub']
+    query = DS.query(kind = USER)
+    query.add_filter('username', '=', sub)
+    result = list(query.fetch())
+    # if this is a new user, create an account for this user
+    if len(result) == 0:
+        entity = datastore.Entity(key = DS.key(USER))
+        entity.update({'username': sub, 'email': claims['email']})
+        DS.put(entity)
+    
+    token = set_session(sub)
+    
+    resp = redirect(url_for("index"))
+    resp.set_cookie('user_cookie', token)
+
+    return resp
+    
+
+def jwt_unpack(id_token):
+    _, body, _ = id_token.split('.')
+    body += '=' * (-len(body) % 4)
+    claims = json.loads(base64.urlsafe_b64decode(body.encode('utf-8')))
+    
+    return claims
+    
+    
 
 if __name__ == '__main__':
     # For local testing
