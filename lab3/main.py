@@ -349,7 +349,6 @@ def g_login():
     # When local testing is not needed, could enable secure=True to restrict cookies only for HTTPS
     # res.set_cookie('g_state', sta, max_age=3600, secure=True)
     # res.set_cookie('g_nonce', non, max_age=3600, secure=True)
-    # print("1111111111111111", sta)
     
     return resp
 
@@ -365,11 +364,9 @@ def discovery(key):
 @app.route('/oidcauth', methods=['GET'])
 def g_auth():
     # state is a CSRF token
-    # print("222222222222222222222", request.cookies.get('g_state'))
-    # print("333333333333333333333333333333", request.args['state'])
-    # if request.args['state'] != request.cookies.get('g_state'):
-    #     print("mark***************************")
-    #     return redirect(url_for('login'))
+    if request.args['state'] != request.cookies.get('g_state'):
+        print("wrong state***************************")
+        return redirect(url_for('login'))
     # else:
         # send a POST request to the ID provider, format: requests.post(url, data)
         # response is the JWT response from the ID provide
@@ -386,8 +383,9 @@ def g_auth():
     
     nonce = claims['nonce']
     
-    # if nonce != request.cookies.get('g_nonce'):
-    #     print("Nonce don't match")
+    if nonce != request.cookies.get('g_nonce'):
+        print("wrong nonce*****************************")
+        return redirect(url_for('login'))
     
     # use sub as username to store this user in the datastore
     sub = claims['sub']
