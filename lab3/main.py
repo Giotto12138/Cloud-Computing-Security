@@ -22,8 +22,9 @@ SESSION = 'session' # 'event' # Name of the event table.
 # for google login
 CLIENT_ID = "885605768888-b5s1tso4trib4i5q2khqlm0c8isph64f.apps.googleusercontent.com"
 REDIRECT_URI = 'https://qingshan-cloud-security.ue.r.appspot.com/oidcauth'
-# for local testing
+# below URI is for local testing
 # REDIRECT_URI = "http://127.0.0.1:7070/oidcauth"
+
 # STATE = str(uuid.uuid4())   
 # NONCE = str(uuid.uuid4())   
 
@@ -51,7 +52,7 @@ def getEvents():
     # only get events belonging to the current user based on the user_key
     query.add_filter('user_key', '=', user_key)
     events = query.fetch()
-    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser, so that we could sort events correctly and display them. The browser will also calculate the remaining time every second 
+    #TODO: calculate the remaining time on the server side, and return the sorted data based on the remaining time to the browser, so that we could sort events correctly and display them. The browser will also calculate the remaining time every second. the bulit-in sorted funcion could not handle yearless date.
     return jsonify({
         'events':sorted([{'name': event['name'], 'date': event['date'], 'id': event.id} for event in events], key=lambda element:(element['date'])), 
         'error': None
@@ -307,8 +308,7 @@ def check_session(token):
 
     return True
 
-# migrates the old events over to the first user
-# there is old events 
+# migrates the old events over to the first user 
 def migrate(username):
     query = DS.query(kind = EVENT, ancestor=ROOT)
     old_events = query.fetch()
@@ -327,7 +327,7 @@ def migrate(username):
     
         
 ''' 
-******************************  Below is the openID Connect section  **********************************
+******************************  Below is the OpenID Connect section  **********************************
 '''     
 
 # when the user chooses to login with google account, render the login form with some parameters
@@ -354,13 +354,12 @@ def g_login():
 
 # obtain the new uri from Google’s discovery document based on the keyword
 def discovery(key):
-    temp = requests.get("https://accounts.google.com/.well-known/openid-configuration")
-    uri_dict = temp.json()
+    disc = requests.get("https://accounts.google.com/.well-known/openid-configuration")
+    uri_dict = disc.json()
     
     return uri_dict[key]
 
-
-# check the state, then process the redirect_uri request
+# process the redirect_uri request
 @app.route('/oidcauth', methods=['GET'])
 def g_auth():
     # state is a CSRF token
@@ -369,7 +368,7 @@ def g_auth():
         return redirect(url_for('login'))
     # else:
         # send a POST request to the ID provider, format: requests.post(url, data)
-        # response is the JWT response from the ID provide
+        # response is a JWT response from the ID provider
     response = requests.post(discovery("token_endpoint"), 
     {   'code': request.args['code'],
         'client_id': CLIENT_ID,
@@ -377,10 +376,10 @@ def g_auth():
         'redirect_uri': REDIRECT_URI,
         'grant_type': 'authorization_code'})
 
-    # parse JWT, check nonce
+    # parse JWT
     id_token = response.json()['id_token']
     claims = jwt_unpack(id_token)
-    
+    # check the nonce
     nonce = claims['nonce']
     
     if nonce != request.cookies.get('g_nonce'):
