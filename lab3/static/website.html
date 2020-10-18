@@ -1,0 +1,57 @@
+<html>
+
+    <style>
+
+    body {
+        background-color: #87CEFA;
+    }
+
+    </style>
+
+    <head>
+        <title>Event Management Site</title>
+    </head>
+
+    <body>
+        <h1>Website features</h1>
+        
+        <h3>Basic functions</h3>
+        1. A simple event management website based on Flask + GCP. All HTML and JavaScript is served statically to keep secure. 
+        <br></br>
+        2. Users can upload events and dates, or delete events.
+        <br></br>   
+        3. The website could update the remaining time of the event in real time and delete expired events. 
+        <br></br> 
+        4. Yearless dates work, showing time to next occurrence of a matching date (e.g., 03-01 means “every March 1st”)  
+        <br></br>
+
+
+        <h3>Password-Based Authentication</h3>
+        1. Added authentication to the website. All of the events are tied to one and only one user; every user manages a unique set of data just for them. When not logged in, the user is automatically directed to a login page.  
+        <br></br>
+        2. All interactions are over HTTPS to secure data transmitting.  
+        <br></br>
+        3. Provided a registration page that allows the user to provide a username and password, then immediately logs them in and redirects them to the main page. 
+        <br></br> 
+        4. Provided a login page that allows the user to provide a username and password. If the username and password are valid, let the user log in.  
+        <br></br>
+        5. Users must login with an opaque session token. Implemented this function without built-in functions like flask.session or flask.login. Users could register, login, and logout with a session token. Session tokens expire after 1 hour. Enforce this by deleting the cookie when an expired session token is used.  
+        <br></br>
+        6. Added a logout button that invalidates the session token, removes the cookie, and redirects the user to the login page.  
+        <br></br>
+        7. Only secure derivatives of passwords are stored in the database. Used Bcypt library for key stretching.  
+        <br></br>
+        8. built a migration function, which could migrate old data to the first user (or a user that you want to have the original data).
+        <br></br>
+        9. Check the login status of users in real time. JSON calls will redirect the entire browser window to the login page when they fail due to a missing (or expired) session token.  
+
+
+
+        <h3>Implement an OpenID Connect Client</h3>
+        1. Implemented an OpenID Connect Client to login with Google. Users could click a third-party OpenID Connect button to their login page.
+        <br></br>
+        2. Added CSRF protection by double cookie verification.
+
+    </body>
+
+</html>
