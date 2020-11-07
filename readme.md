@@ -34,4 +34,12 @@ https://qingshan-cloud-security.ue.r.appspot.com/
 4. Wrote a little script that outputs the URL you should go to(ip address and port) in order to see the output.
 
 
-## Lab 5
+## Lab 5    Escape a Container
+Understood and reproduced CVE-2019-5736 runC Docker escape vulnerability.
+
+## Lab 6    Create a Service Spanning Multiple Containers
+1. Initialized Postgres by creating a database with two columns: path and count.
+2. Created a service that accepts GET requests and keeps track of them in the database.
+3. Ran everything in its own container.
+4. Returned a page that shows all paths in ascending lexicographical order, with their counts next to them.
+
