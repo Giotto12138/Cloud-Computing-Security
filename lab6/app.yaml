@@ -1,0 +1,19 @@
+runtime: python37
+
+handlers:
+#set “secure: always” in each handler to force SSL
+
+  # This configures Google App Engine to serve the files in the app's static directory.
+- url: /templates
+  static_dir: templates
+  secure: always
+
+  # This handler routes all requests not caught above to your main app. It is
+  # required when static routes are defined, but can be omitted (along with
+  # the entire handlers section) when there are no static files defined.
+- url: /.*
+  script: auto
+  secure: always
+
+# Cache save time of static files
+default_expiration: "30s"

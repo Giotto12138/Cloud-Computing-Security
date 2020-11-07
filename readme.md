@@ -32,3 +32,6 @@ https://qingshan-cloud-security.ue.r.appspot.com/
 2. Wrote HTTP server code that outputs “Hello, World!” from port 8080 (from inside).
 3. Wrote Dockerfile. 
 4. Wrote a little script that outputs the URL you should go to(ip address and port) in order to see the output.
+
+
+## Lab 5

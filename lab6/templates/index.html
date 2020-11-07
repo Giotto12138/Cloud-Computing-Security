@@ -1,0 +1,41 @@
+<html>
+    <center>
+<head>
+
+    <style>
+
+        body {
+            background-color: #87CEFA;
+        }
+    
+        th,td{
+            padding: 5px;
+            text-align: center;
+        }
+    
+    </style>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>URL Path Count</title>
+<h1>URL Path Count</h1>
+<br><br/>
+
+</head>
+
+    <body>
+
+        <table border="3" cellspacing="0" cellpadding="0" frame=above>
+            {% for key, value in data.items() %}
+                <tr>
+                <th> {{ key }} </th>
+                <td> {{ value }} </td>
+                </tr>
+            {% endfor %}
+        </table>
+
+    </body>
+
+    </center>
+</html>
+
